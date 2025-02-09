@@ -29,6 +29,26 @@ void find_roots(double a, double b, double c, double& root1, double& root2, bool
 	}
 }
 
+void print_results(double root1, double root2, bool HasRealRoots)
+{
+	if (HasRealRoots == true)
+	{
+		if (root1 == root2)
+		{
+			std::cout << "Единственный корень: " << root1 << std::endl;
+		}
+		else
+		{
+			std::cout << "Первый корень: " << root1 << std::endl;
+			std::cout << "Второй корень: " << root2 << std::endl;
+		}
+	}
+	else
+	{
+		std::cout << "Уравнение не имеет вещественных корней.";
+	}
+}
+
 int main()
 {
 	setlocale(LC_ALL, "Russian");
@@ -37,6 +57,7 @@ int main()
 
 	get_coefficients(a, b, c);
 	find_roots(a, b, c, root1, root2, HasRealRoots);
+	print_results(root1, root2, HasRealRoots);
 
 	return 0;
 }

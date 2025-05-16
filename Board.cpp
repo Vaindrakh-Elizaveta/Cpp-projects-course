@@ -4,6 +4,7 @@
 #include <ctime>
 #include <SFML/Graphics.hpp>
 #include <algorithm>
+#include<random>
 
 const int BONUS_CHANCE = 50;
 const int BONUS_RADIUS = 3;
@@ -130,7 +131,8 @@ void Board::destroyMatches()
 				{
 					generateBonus(i, j);
 				}
-				grid[i][j].bonus = NONE;   // Сбрасываем бонус (если есть)
+				grid[i][j].bonus = nullptr;   // Сбрасываем бонус (если есть)
+				grid[i][j].bonusActivated = false;
 				grid[i][j].alpha = 255;
 				grid[i][j].fallOffset = { 0, 0 };
 			}
@@ -312,7 +314,7 @@ void Board::activatePendingBonuses()
 	{
 		for (int j = 0; j < cols; j++)
 		{
-			if (grid[i][j].bonus != NONE && !grid[i][j].bonusActivated)
+			if (grid[i][j].bonus && !grid[i][j].bonusActivated)
 			{
 				activateBonus(i, j);
 			}
@@ -452,93 +454,26 @@ void Board::generateBonus(int sourceRow, int sourceCol)
 
 	if (grid[targetRow][targetCol].color != EMPTY)
 	{
-		grid[targetRow][targetCol].bonus = (rng() % 2 == 0) ? RECOLOR : BOMB;
-		grid[targetRow][targetCol].bonusSource = sf::Vector2f(sourceRow, sourceCol);
+		if (rng() % 2 == 0)
+		{
+			grid[targetRow][targetCol].bonus = std::make_shared<RecolorBonus>(sf::Vector2f(sourceCol, sourceRow));
+		}
+		else
+		{
+			grid[targetRow][targetCol].bonus = std::make_shared<BombBonus>(sf::Vector2f(sourceCol, sourceRow));
+		}
 	}
 }
 
 void Board::activateBonus(int row, int col)
 {
 	if (row < 0 || row >= rows || col < 0 || col >= cols) return;
+	if (!grid[row][col].bonus) return;
 
 	grid[row][col].bonusActivated = true;
-
-	switch (grid[row][col].bonus)
-	{
-	case RECOLOR:
-		applyRecolorBonus(row, col);
-		break;
-	case BOMB:
-		applyBombBonus(row, col);
-		state = BoardState::Fading;
-		stateTimer = 0;
-		break;
-	case NONE:
-		return;
-	}
-
-	grid[row][col].bonus = NONE;
+	grid[row][col].bonus->apply(*this, row, col, rng);
+	grid[row][col].bonus.reset();
 	grid[row][col].bonusActivated = false;
-	grid[row][col].bonusSource = sf::Vector2f(-1, -1);
-}
-
-void Board::applyRecolorBonus(int row, int col)
-{
-	if (row < 0 || row >= rows || col < 0 || col >= cols) return;
-	if (grid[row][col].color == EMPTY) return;
-
-	int sourceRow = grid[row][col].bonusSource.y;
-	int sourceCol = grid[row][col].bonusSource.x;
-	if (sourceRow == -1 || sourceCol == -1) return;
-
-	Color targetColor = grid[sourceRow][sourceCol].color;
-	int recolored = 0;
-	int maxAttempts = 100;
-	
-	grid[row][col].color = targetColor;
-	recolored++;
-
-	while (recolored < 3 && maxAttempts > 0)
-	{
-		int r = sourceRow + (rng() % (BONUS_RADIUS * 2 + 1) - BONUS_RADIUS);
-		int c = sourceCol + (rng() % (BONUS_RADIUS * 2 + 1) - BONUS_RADIUS);
-
-		if (r >= 0 && r < rows && c < cols && c >= 0 &&
-			!(r == sourceRow && c == sourceCol) &&
-			(abs(r - sourceRow) + abs(c - sourceCol) > 1) &&
-			grid[r][c].color != EMPTY)
-		{
-			grid[r][c].color = targetColor;
-			recolored++;
-		}
-		maxAttempts--;
-	}
-
-}
-
-void Board::applyBombBonus(int row, int col)
-{
-	int destroyed = 0;
-	
-	// Уничтожаем клетку с бомбой
-	if (grid[row][col].color != EMPTY) {
-		grid[row][col].toBeDestroyed = true;
-		destroyed++;
-	}
-
-	while (destroyed < 5)
-	{
-		int r = rng() % rows;
-		int c = rng() % cols;
-
-		if (grid[r][c].color != EMPTY && !grid[r][c].toBeDestroyed)
-		{
-			grid[r][c].toBeDestroyed = true;  // Помечаем для анимации
-			grid[r][c].alpha = 255;
-			destroyed++;
-		}
-	}
-
 }
 
 bool Board::isBonusActive() const
@@ -547,11 +482,117 @@ bool Board::isBonusActive() const
 	{
 		for (const auto& cell : row)
 		{
-			if (cell.bonus != NONE && !cell.bonusActivated) return true;
+			if (cell.bonus && !cell.bonusActivated) return true;
 		}
 	}
 
 	return false;
 }
 
+bool Board::isCellEmpty(int row, int col) const 
+{
+	if (row < 0 || row >= rows || col < 0 || col >= cols) {
+		return true;
+	}
+	return grid[row][col].color == EMPTY;
+}
+
+sf::Vector2f Board::getBonusSource(int row, int col) const 
+{
+	if (row < 0 || row >= rows || col < 0 || col >= cols) 
+	{
+		return { -1, -1 };
+	}
+	return grid[row][col].bonusSource;
+}
+
+void Board::setCellColor(int row, int col, Color color) 
+{
+	if (row >= 0 && row < rows && col >= 0 && col < cols) 
+	{
+		grid[row][col].color = color;
+	}
+}
+
+void RecolorBonus::apply(Board& board, int row, int col, std::mt19937& rng)
+{
+	if (row < 0 || row >= board.getRows() || col < 0 || col >= board.getCols()) return;
+	if (board.isCellEmpty(row, col)) return;
+
+	sf::Vector2f source = board.getBonusSource(row, col);
+	if (source.x == -1 || source.y == -1) return;
+	
+	Color targetColor = board.getCellColor(source.y, source.x);
+	int recolored = 0;
+	int maxAttempts = 100;
+
+	board.setCellColor(row, col, targetColor);
+	recolored++;
+
+	while (recolored < 3 && maxAttempts > 0)
+	{
+		int r = source.y + (rng() % (BONUS_RADIUS * 2 + 1) - BONUS_RADIUS);
+		int c = source.x + (rng() % (BONUS_RADIUS * 2 + 1) - BONUS_RADIUS);
+
+		if (r >= 0 && r < board.getRows() && c < board.getCols() && c >= 0 &&
+			!(r == source.y && c == source.x) &&
+			(abs(r - source.y) + abs(c - source.x) > 1) &&
+			board.getCellColor(r, c) != EMPTY)
+		{
+			board.setCellColor(r, c, targetColor);
+			recolored++;
+		}
+		maxAttempts--;
+	}
+}
+
+void Board::markCellForDestruction(int row, int col) 
+{
+	if (row >= 0 && row < rows && col >= 0 && col < cols) 
+	{
+		grid[row][col].toBeDestroyed = true;
+		grid[row][col].alpha = 255;
+	}
+}
+
+bool Board::isCellMarkedForDestruction(int row, int col) const 
+{
+	if (row < 0 || row >= rows || col < 0 || col >= cols) 
+	{
+		return false;
+	}
+	return grid[row][col].toBeDestroyed;
+}
+
+void BombBonus::apply(Board& board, int row, int col, std::mt19937& rng)
+{
+	int destroyed = 0;
+
+	// Уничтожаем клетку с бомбой
+	if (board.getCellColor(row, col) != EMPTY) 
+	{
+		board.markCellForDestruction(row, col);
+		destroyed++;
+	}
+
+	while (destroyed < 5)
+	{
+		int r = rng() % board.getRows();
+		int c = rng() % board.getCols();
+
+		if (!board.isCellEmpty(r, c) && !board.isCellMarkedForDestruction(r, c))
+		{
+			board.markCellForDestruction(r, c);
+			destroyed++;
+		}
+	}
+
+}
+
+sf::Color Board::getBonusColor(int row, int col) const 
+{
+	if (row < 0 || row >= rows || col < 0 || col >= cols) return sf::Color::Transparent;
+	if (!grid[row][col].bonus) return sf::Color::Transparent;
+	return grid[row][col].bonus->getIndicatorColor();
+}
 

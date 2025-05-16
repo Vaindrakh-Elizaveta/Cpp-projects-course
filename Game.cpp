@@ -80,16 +80,11 @@ void Game::render()
 
 void Game::drawBonus(int row, int col, const sf::Vector2f& pos)
 {
+    if (!board.hasBonus(row, col)) return;
+
     sf::CircleShape indicator(cellSize / 4);
     indicator.setPosition(pos.x + cellSize / 4, pos.y + cellSize / 4);
-
-    switch (board.getBonusType(row, col))
-    {
-    case RECOLOR: indicator.setFillColor(sf::Color(0, 255, 255)); //Голубой
-        break;
-    case BOMB: indicator.setFillColor(sf::Color(0, 0, 0)); //Красный
-        break;
-    }
+    indicator.setFillColor(board.getBonusColor(row, col));
 
     window.draw(indicator);
 }

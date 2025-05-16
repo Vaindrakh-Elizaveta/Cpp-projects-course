@@ -4,6 +4,7 @@
 #include<vector>
 #include<random>
 #include<ctime>
+#include "Bonus.h"
 
 using namespace std;
 
@@ -29,6 +30,11 @@ public:
 	Color getCellColor(int row, int col) const { return grid[row][col].color; }
 	sf::Vector2f getFallOffset(int row, int col) const { return grid[row][col].fallOffset; }
 	int getAlpha(int row, int col) const { return grid[row][col].alpha; }
+	bool isCellEmpty(int row, int col) const;
+	sf::Vector2f getBonusSource(int row, int col) const;
+	void setCellColor(int row, int col, Color color);
+	void markCellForDestruction(int row, int col);
+	bool isCellMarkedForDestruction(int row, int col) const;
 
 	bool isValidSwap(int x1, int y1, int x2, int y2);
 	void swapCells(int row1, int col1, int row2, int col2);
@@ -42,14 +48,12 @@ public:
 	void update(float deltaTime);
 	//бонусы
 	void generateBonus(int sourceRow, int sourceCol);
-	void applyRecolorBonus(int row, int col);
-	void applyBombBonus(int row, int col);
 	void activateBonus(int row, int col);
 
-	bool hasBonus(int row, int col) const { return grid[row][col].bonus != NONE; }
-	BonusType getBonusType(int row, int col) const { return grid[row][col].bonus; }
+	bool hasBonus(int row, int col) const { return grid[row][col].bonus != nullptr && !grid[row][col].bonusActivated; }
 	bool isBonusActive() const;
 	void activatePendingBonuses();
+	sf::Color getBonusColor(int row, int col) const;
 
 	void print();
 	bool isAnimating() const { return state != BoardState::Idle; }

@@ -1,14 +1,16 @@
-#include "Board.h"
-#include<locale.h>
-#include <windows.h>
+#include <SFML/Graphics.hpp>
+#include <iostream>
+#include"Ball.h"
+#include"Paddle.h"
+#include<vector>
+#include"Block.h"
 #include"Game.h"
 
 int main()
 {
-	Game game(8, 8);
+	std::srand(static_cast<unsigned>(std::time(nullptr)));
+	Game game;
 	game.run();
 
 	return 0;
 }
-
-

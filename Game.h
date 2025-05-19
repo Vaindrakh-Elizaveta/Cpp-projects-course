@@ -1,32 +1,53 @@
 #pragma once
 #include <SFML/Graphics.hpp>
-#include"Board.h"
-
-
+#include <vector>
+#include "Paddle.h"
+#include "Ball.h"
+#include "Block.h"
+#include <memory>
+#include"StandartBlock.h"
+#include "UnbreakableBlock.h"
+#include "SpeedUpBlock.h"
+#include"BonusBlock.h"
+#include"Bonus.h"
 
 class Game
 {
-private:
-	sf::RenderWindow window;
-	Board board;
-
-	static constexpr int cellSize = 64;
-
-	bool isFirstClick = true;
-	sf::Vector2i firstSelectedCell;
-	sf::Vector2i secondSelectedCell;
-
 public:
-	Game(int rows, int cols);
+	Game();
 	void run();
 
 private:
 	void processEvents();
-	void update(float deltaTime);
+	void update();
 	void render();
-	void handleMouseClick(int x, int y);
-	void SwapCells();
-	void drawSelection();
-	void drawBonus(int row, int col, const sf::Vector2f& pos);
+	void generateBlocks();
+	void handleBallMiss();
+	void showGameOverScreen();
+
+	sf::RenderWindow window;
+	Paddle paddle;
+	Ball ball;
+	std::vector<std::unique_ptr<Block>> blocks;
+
+	int score;
+	sf::Font font;
+	sf::Text scoreText;
+
+	int lives = 4; //количество жизней
+	int defeats = 0; //счётчик поражений
+	sf::Text livesText; //Текст для отображения жизней
+
+	sf::Clock blinkTimer;  // Таймер для анимации
+	bool isBlinking = false; // Флаг мигания
+	float blinkDuration = 0.5f; // Длительность мигания
+
+	
+	std::vector<std::unique_ptr<FallingBonus>> activeBonuses;
+
+	bool oneTimeBottomActive = false;
+	
+	bool isRunning;
+	bool gameOver = false;
 };
 

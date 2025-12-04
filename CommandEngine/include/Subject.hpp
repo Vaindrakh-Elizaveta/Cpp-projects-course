@@ -31,4 +31,29 @@ public:
         std::cout << "[Subject::get_magic_number]\n";
         return 42;
     }
+
+    // 5) Возвращает строку в зависимости от булевского флага
+    std::string yes_no(bool flag) {
+        std::cout << "[Subject::yes_no] flag = " << flag << "\n";
+        return flag ? "YES" : "NO";
+    }
+
+    // 6) Склеивает строку и число
+    std::string mix(std::string s, double x) {
+        std::cout << "[Subject::mix] s = \"" << s << "\", x = " << x << "\n";
+        return s + " * " + std::to_string(x);
+    }
+
+    // 7) Печатает три числа, ничего не возвращает
+    void log3(int a, int b, int c) {
+        std::cout << "[Subject::log3] a = " << a
+            << ", b = " << b
+            << ", c = " << c << "\n";
+    }
+
+    // 8) Вычисляет линейную комбинацию 5 чисел
+    double linear5(double a, double b, double c, double d, double e) {
+        std::cout << "[Subject::linear5] called\n";
+        return a + 2 * b + 3 * c + 4 * d + 5 * e;
+    }
 };
